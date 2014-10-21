@@ -1,0 +1,48 @@
+ag- unter 120%
+über 200.000€
+1 aktien zum aktuellen kurs kaufen und speichern
+if(110€<buchwert<90€) then startwert = 200€ && buchwert=100€
+
+aktueller kurs= GET()
+Startwert= GET() (buchwert*2)
+anzahl im verkauf (immer unterm briefkurs)
+
+int tempKurs = kurs;
+for(int hours = 0;kurs>startwert/2;hours++){
+	tempKurs = tempKurs*0,98;
+	if(tempKurs <= kurs*0,8){
+		tempkurs = 0;
+		break;
+	}
+}
+if(tempKurs== 0){
+	return null;
+}
+kosten=anzahl*kurs;
+DISP"kosten"
+
+//order erstellen
+
+anzahl
+name
+id
+zeit = hours;
+limit = tempKurs;
+type = buy;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
