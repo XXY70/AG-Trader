@@ -1,5 +1,8 @@
 package main;
 
+import items.AG;
+import items.Order;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,9 +19,17 @@ import com.google.gson.GsonBuilder;
 public class Config {
 
 	public List<String> cookies;
+	public String Username;
+	public String Password;
+	public ArrayList<AG> AGs;
+	public ArrayList<Order> Orders;
 
 	public Config() {
 		cookies = new ArrayList<String>();
+		Username = "Borjan";
+		Password = "bnmopützu";
+		AGs = new ArrayList<AG>();
+		Orders = new ArrayList<Order>();
 	}
 
 	private static Config instance;

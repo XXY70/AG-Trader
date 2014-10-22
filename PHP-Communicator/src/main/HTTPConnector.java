@@ -2,9 +2,11 @@ package main;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.Proxy;
 import java.net.SocketAddress;
 import java.net.URL;
@@ -23,22 +25,20 @@ public class HTTPConnector {
 
 	private HttpURLConnection conn;
 	private Proxy proxy;
-	private final String USER_AGENT = "Mozilla/5.0";
+	private final String USER_AGENT = "Mozilla/5.0 (Windows NT 6.2; WOW64; rv:16.0.1) Gecko/20121011 Firefox/33.0";
+	private URL url = new URL("http://www.ag-spiel.de/app/index.php?selection=");
+	private List<String> paramList;
 
-	public HTTPConnector() {
-		SocketAddress addr = new InetSocketAddress("127.0.0.1", 9150);
-		proxy = new Proxy(Proxy.Type.SOCKS, addr);
-	}
-
-	public void sendPost(String url, String postParams) throws Exception {
-
-		URL obj = new URL(url);
-		conn = (HttpURLConnection) obj.openConnection(proxy);
-
-		// Acts like a browser
+	public HTTPConnector(boolean useProxy) throws IOException {
+		if (useProxy) {
+			SocketAddress addr = new InetSocketAddress("127.0.0.1", 9150);
+			proxy = new Proxy(Proxy.Type.SOCKS, addr);
+			conn = (HttpURLConnection) url.openConnection(proxy);
+		} else {
+			conn = (HttpURLConnection) url.openConnection();
+		}
 		conn.setUseCaches(false);
-		conn.setRequestMethod("POST");
-		conn.setRequestProperty("Host", "www.ag-spiel.de");
+		conn.setRequestProperty("Host", "ag-spiel.de");
 		conn.setRequestProperty("User-Agent", USER_AGENT);
 		conn.setRequestProperty("Accept",
 				"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
@@ -50,20 +50,24 @@ public class HTTPConnector {
 		conn.setRequestProperty("Referer", "");
 		conn.setRequestProperty("Content-Type",
 				"application/x-www-form-urlencoded");
-		conn.setRequestProperty("Content-Length",
-				Integer.toString(postParams.length()));
-
 		conn.setDoOutput(true);
 		conn.setDoInput(true);
+	}
 
-		// Send post request
+	public String sendPost(String url, String postParams) throws IOException {
+
+		conn.setRequestProperty("Content-Length",
+				Integer.toString(postParams.length()));
+		conn.setRequestMethod("POST");
+
 		DataOutputStream wr = new DataOutputStream(conn.getOutputStream());
 		wr.writeBytes(postParams);
 		wr.flush();
 		wr.close();
 
 		int responseCode = conn.getResponseCode();
-		System.out.println("\nSending 'POST' request to URL : " + url);
+		System.out.println("\nSending 'POST' request to URL : " + this.url
+				+ url);
 		System.out.println("Post parameters : " + postParams);
 		System.out.println("Response Code : " + responseCode);
 
@@ -76,25 +80,12 @@ public class HTTPConnector {
 			response.append(inputLine);
 		}
 		in.close();
-		// System.out.println(response.toString());
-
+		return response.toString();
 	}
 
-	public String GetPageContent(String url) throws Exception {
+	public String getPageContent(String url) throws Exception {
 
-		URL obj = new URL(url);
-		conn = (HttpURLConnection) obj.openConnection(proxy);
-
-		// default is GET
 		conn.setRequestMethod("GET");
-
-		conn.setUseCaches(false);
-
-		// act like a browser
-		conn.setRequestProperty("User-Agent", USER_AGENT);
-		conn.setRequestProperty("Accept",
-				"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-		conn.setRequestProperty("Accept-Language", "de-DE,de;q=0.5");
 		if (Config.getInstance().cookies != null) {
 			for (String cookie : Config.getInstance().cookies) {
 				conn.addRequestProperty("Cookie", cookie.split(";", 1)[0]);
@@ -121,27 +112,29 @@ public class HTTPConnector {
 
 	}
 
-	public String getFormParams(String html, String username, String password)
+	public void setFormParam(String html, String elementID, String elementTag,
+			String selector, String inputValue)
 			throws UnsupportedEncodingException {
 
-		System.out.println("Extracting form's data...");
+		System.out.println("Extracting form's " + selector + "...");
 
 		Document doc = Jsoup.parse(html);
 
-		// Google form id
-		Element loginform = doc.getElementById("content");
-		Elements inputElements = loginform.getElementsByTag("input");
-		List<String> paramList = new ArrayList<String>();
+		Element loginform = doc.getElementById(elementID);
+		Elements inputElements = loginform.getElementsByTag(elementTag);
+		paramList = new ArrayList<String>();
 		for (Element inputElement : inputElements) {
 			String key = inputElement.attr("name");
 			String value = inputElement.attr("value");
 
-			if (key.equals("username"))
-				value = username;
-			else if (key.equals("userpass"))
-				value = password;
+			if (key.equals(selector)) {
+				value = inputValue;
+			}
 			paramList.add(key + "=" + URLEncoder.encode(value, "UTF-8"));
 		}
+	}
+
+	public String getFormParams() {
 
 		// build parameters list
 		StringBuilder result = new StringBuilder();
@@ -152,7 +145,18 @@ public class HTTPConnector {
 				result.append("&" + param);
 			}
 		}
+		paramList.clear();
 		return result.toString();
+	}
+
+	public void test(String url) throws MalformedURLException, IOException {
+		HttpURLConnection con = (HttpURLConnection) (new URL(url).openConnection());
+		con.setInstanceFollowRedirects(false);
+		con.connect();
+		int responseCode = con.getResponseCode();
+		System.out.println(responseCode);
+		String location = con.getHeaderField("Location");
+		System.out.println(location);
 	}
 
 	public List<String> getCookies() {
